@@ -1,7 +1,6 @@
-#[allow(unused_variables)]
-use crate::http::Request;
+use crate::http::{Request,Response, StatusCode};
 use std::convert::TryFrom;
-use std::io::Read;
+use std::io::{Write,Read};
 use std::net::TcpListener;
 
 
@@ -33,14 +32,21 @@ impl Server {
                         Ok(bytes) => {
                             println!("Received a request: {}", String::from_utf8_lossy(&buffer));
 
-                            match Request::try_from(&buffer[..]) {
+                            let reponse = match Request::try_from(&buffer[..]) {
                                 Ok(request) => {
                                     dbg!(request);
+                                    Response::new(StatusCode::Ok, Some("<h1>It works !!!</h1>".to_string()))
                                 },
-                                Err(e)=> println!("Failed to parse a request, {}", e)
-                            }
+                                Err(e)=> {
+                                    println!("Failed to parse a request, {}", e);
+                                    Response::new(StatusCode::BadRequest, None)
+                                },
+                            };
 
-                        },
+                            if let Err(e) = response.send(&mut stream) {
+                                println!("failed to send response: {}", e)
+                            }
+                        }
                         Err(e) => {println!("We failed to read from connection: {}", e)},
                     }
                 }
