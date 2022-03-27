@@ -1,9 +1,9 @@
 use super::method::{Method, MethodError};
+use super::{QueryString, QueryStringValue};
 use std::convert::TryFrom;
 use std::error::Error;
-use std::fmt::{Display,Debug, Formatter, Result as FmtResult};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::str::{self, Utf8Error};
-use super::{QueryString, QueryStringValue};
 
 #[derive(Debug)]
 pub struct Request<'buf> {
@@ -11,7 +11,18 @@ pub struct Request<'buf> {
     query_string: Option<QueryString<'buf>>,
     method: Method,
 }
- 
+
+impl<'buf> Request<'buf> {
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+    pub fn method(&self) -> &Method {
+        &self.method
+    }
+    pub fn query_string(&self) -> Option<&QueryString> {
+        self.query_string.as_ref()
+    }
+}
 impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
     type Error = ParseError;
 
@@ -30,22 +41,20 @@ impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
         let method: Method = method.parse()?;
 
         let mut query_string = None;
-     
 
         if let Some(i) = path.find('?') {
             query_string = Some(QueryString::from(&path[i + 1..]));
             path = &path[..i];
         }
 
-
         Ok(Self {
             path,
             query_string,
-            method
+            method,
         })
     }
 }
-/* 
+/*
 impl Request {
     fn from_byte_array(buf: &[u8]) -> Result<Self, String> {
         unimplemented!()
@@ -54,14 +63,12 @@ impl Request {
  */
 fn get_next_word(request: &str) -> Option<(&str, &str)> {
     let iter = request.chars();
-    
     for (i, c) in iter.enumerate() {
-        if c == ' ' || c == '\r'  {
+        if c == ' ' || c == '\r' {
             return Some((&request[..i], &request[i + 1..]));
         }
     }
     None
-
 }
 
 pub enum ParseError {
@@ -105,6 +112,5 @@ impl Debug for ParseError {
         write!(f, "{}", self.message())
     }
 }
-
 
 impl Error for ParseError {}
